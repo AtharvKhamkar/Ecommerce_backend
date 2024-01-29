@@ -1,3 +1,4 @@
+import { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -55,7 +56,6 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!checkRegistered) {
         throw new ApiError(401,"No user found please register first")
     }
-    console.log(checkRegistered)
 
     const isPasswordValid = await checkRegistered.isPasswordCorrect(password)
     if (!isPasswordValid) {
@@ -65,7 +65,6 @@ const loginUser = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(checkRegistered._id)
     
     const loggedInUser = await User.findById(checkRegistered._id).select("-password -refreshToken")
-
     const options = {
         httpOnly: true,
         secure:true
@@ -85,5 +84,87 @@ const loginUser = asyncHandler(async (req, res) => {
     )
 })
 
-export { loginUser, registerUser };
+const getAllUsers = asyncHandler(async(req, res) => {
+    const allUsers = await User.find().select("-password -refreshToken")
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                allUsers,
+                "All users fetched successfully"
+        )
+    )
+})
+
+const getUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400,"Please send valid commentID")
+    }
+    
+    const user = await User.findById(userId).select("-password -refreshToken")
+    if (!user) {
+        throw new ApiResponse(400,"User not found please provide valid userID")
+    }
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "User fetched successfully"
+        )
+    )
+})
+
+const deleteUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+    const user = await User.findByIdAndDelete(userId)
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    deleted_user:user.firstName
+                },
+                "User deleted successfully"
+        )
+    )
+})
+
+const updateUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400,"Invalid ObjectId")
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: {
+                firstName: req?.body?.firstName,
+                lastName: req?.body?.lastName,
+                email: req?.body?.email,
+                mobile:req?.body?.mobile
+            }
+        },
+        {
+            new : true
+        }
+    )
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedUser,
+                "User updated successfully"
+        )
+    )
+})
+
+
+export { deleteUser, getAllUsers, getUser, loginUser, registerUser, updateUser };
 
