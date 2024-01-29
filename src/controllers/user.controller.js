@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -135,13 +136,8 @@ const deleteUser = asyncHandler(async (req, res) => {
 })
 
 const updateUser = asyncHandler(async (req, res) => {
-    const { userId } = req.params
-    if (!isValidObjectId(userId)) {
-        throw new ApiError(400,"Invalid ObjectId")
-    }
-
     const updatedUser = await User.findByIdAndUpdate(
-        userId,
+        req.user._id,
         {
             $set: {
                 firstName: req?.body?.firstName,
@@ -153,7 +149,7 @@ const updateUser = asyncHandler(async (req, res) => {
         {
             new : true
         }
-    )
+    ).select("-password -refreshToken")
 
     return res.status(200)
         .json(
@@ -165,6 +161,97 @@ const updateUser = asyncHandler(async (req, res) => {
     )
 })
 
+const blockUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400,"Please provide valid userID")
+    }
 
-export { deleteUser, getAllUsers, getUser, loginUser, registerUser, updateUser };
+    const block = await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: {
+                isBlocked:true
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                "User blocked"
+        )
+    )
+})
+
+const unblockUser = asyncHandler(async (req, res) => {
+    const { userId } = req.params
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400,"Invalid userId")
+    }
+
+    const unblock = await User.findByIdAndUpdate(
+        userId,
+        {
+            $set: {
+                isBlocked:false
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                "User unblocked"
+        )
+    )
+})
+
+const renewAccessAndRefreshToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken
+    if (!incomingRefreshToken) {
+        throw new ApiError(400,"Invalid refresh token")
+    }
+
+    const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+    
+    const user = await User.findById(decodedRefreshToken._id)
+    if (!user) {
+        throw new ApiError(401,"Invalid User")
+    }
+
+    if (incomingRefreshToken !== user?.refreshToken) {
+        throw new ApiError(402,"refresh token did not matched")
+    }
+
+    const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id)
+    const options= {
+        httpOnly: true,
+        secure:true
+    }
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    accessToken,refreshToken
+                },
+                "accessToken and refreshToken renewed"
+        )
+    )
+})
+
+
+export { blockUser, deleteUser, getAllUsers, getUser, loginUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser };
 
