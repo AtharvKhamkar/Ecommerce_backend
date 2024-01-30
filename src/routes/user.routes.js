@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { blockUser, deleteUser, getAllUsers, getUser, loginUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser } from "../controllers/user.controller.js";
+import { blockUser, deleteUser, getAllUsers, getUser, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser } from "../controllers/user.controller.js";
 import { isAdmin, verifyJWT } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -14,6 +14,7 @@ router.route("/delete-user/:userId").delete(deleteUser)
 router.route("/update-user").patch(verifyJWT, upload.none(), updateUser)
 router.route("/block-user/:userId").patch(blockUser)
 router.route("/unblock-user/:userId").patch(unblockUser)
-router.route("/renew-tokens").post(upload.none(),renewAccessAndRefreshToken)
+router.route("/renew-tokens").post(upload.none(), renewAccessAndRefreshToken)
+router.route("/logout").post(verifyJWT,upload.none(),logoutUser)
 
 export default router

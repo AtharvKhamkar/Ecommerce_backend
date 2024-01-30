@@ -252,6 +252,36 @@ const renewAccessAndRefreshToken = asyncHandler(async (req, res) => {
     )
 })
 
+const logoutUser = asyncHandler(async (req, res) => {
+    await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                refreshToken:1
+            }
+        },
+        {
+            new:true
+        }
+    )
 
-export { blockUser, deleteUser, getAllUsers, getUser, loginUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser };
+    const options = {
+        httpOnly: true,
+        secure:true
+    }
+
+    return res.status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "User logged OUt"
+        )
+    )
+})
+
+
+export { blockUser, deleteUser, getAllUsers, getUser, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser };
 
