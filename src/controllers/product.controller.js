@@ -45,26 +45,23 @@ const getaProduct = asyncHandler(async (req, res) => {
 
 const getAllProducts = asyncHandler(async (req, res) => {
     try {
-
         //Filtering
-        const queryObj = { ...req.query };
-        const excludeFields = ["page", "limit", "sort", "fields"];
-        excludeFields.forEach((el) => delete queryObj[el]);
-        
-        let queryStr = JSON.stringify(queryObj)
-        queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/, (match) => `$${match}`)
-        let query = Product.find(JSON.parse(queryStr))
-
+        const queryObj = { ...req.query }
+        const excludeFields = ["page", "limit", "sort", "fields"]
+        excludeFields.forEach((el) => delete queryObj[el])
+        let stringObj = JSON.stringify(queryObj)
+        stringObj = stringObj.replace(/\b(gt|gte|lt|lte)\b/g, match=> `$${match}`)
+        let query = Product.find(JSON.parse(stringObj))
 
         //sorting
         if (req.query.sort) {
-            let sortBy = req.query.sort.split(",").join(" ");
+            let sortBy = req.query.sort.split(",").join(" ")
             query = query.sort(sortBy)
         } else {
             query = query.sort("-createdAt")
         }
 
-        //limiting the fields
+        //selecting fields
         if (req.query.fields) {
             let fields = req.query.fields.split(",").join(" ")
             query = query.select(fields)
@@ -72,7 +69,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
             query = query.select("-__v -createdAt -updatedAt")
         }
 
-        //Pagination
+        //pagination
         let page = req.query.page || 1
         if (page < 1) {
             page = 1
@@ -80,22 +77,31 @@ const getAllProducts = asyncHandler(async (req, res) => {
         const limit = req.query.limit || 3
         const skip = (page - 1) * limit
         query = query.skip(skip).limit(limit)
-
         if (req.query.page) {
-            const totalDocument = await Product.countDocuments()
-            if(skip>=totalDocument) return res.status(200).json(new ApiResponse(200,{},"This page does not exists"))
+            const totalDocs = await Product.countDocuments()
+            if (skip >= totalDocs) {
+                return res.status(200)
+                    .json(
+                        new ApiResponse(
+                            200,
+                            {},
+                            "This page can not be found"
+                    )
+                )
+            }
         }
 
         const allProducts = await query
         return res.status(200)
             .json(
-                new ApiResponse(   
+                new ApiResponse(
                     200,
                     allProducts,
-                    "Successful"
+                    "Successfully fetched products"
             )
         )
-        
+
+
     } catch (error) {
         console.log(error)
     }

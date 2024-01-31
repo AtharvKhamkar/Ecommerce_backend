@@ -3,6 +3,7 @@ import { createProduct, deleteProduct, getAllProducts, getaProduct, updateProduc
 import { isAdmin, verifyJWT } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
+
 const router = Router()
 
 router.route("/add-product").post(upload.none(), verifyJWT,isAdmin,createProduct)
