@@ -28,11 +28,14 @@ const productSchema = new mongoose.Schema({
         required:true
     },
     quantity: {
-        type:Number
+        type: Number,
+        required:true,
+        select:false
     },
     sold: {
         type: Number,
-        default:0
+        default: 0,
+        select:false
     },
     images: {
         type:Array,
