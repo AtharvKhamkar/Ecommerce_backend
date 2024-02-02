@@ -161,6 +161,30 @@ const updateUser = asyncHandler(async (req, res) => {
     )
 })
 
+const updatePassword = asyncHandler(async (req, res) => {
+    const { userId } = req.user?._id
+    const {newPassword} = req.body
+    if (!isValidObjectId) {
+        throw new ApiError(400,"Invalid user ID")
+    }
+    if (!newPassword) {
+        throw new ApiError(400,"new password is required")
+    }
+
+    const fetchUser = await User.findById(req.user?._id)
+    fetchUser.password = newPassword
+    await fetchUser.save()
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Password updated successfully"
+        )
+    )
+})
+
 const blockUser = asyncHandler(async (req, res) => {
     const { userId } = req.params
     if (!isValidObjectId(userId)) {
@@ -283,5 +307,5 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 
-export { blockUser, deleteUser, getAllUsers, getUser, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, unblockUser, updateUser };
+export { blockUser, deleteUser, getAllUsers, getUser, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, unblockUser, updatePassword, updateUser };
 
