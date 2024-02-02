@@ -113,6 +113,6 @@ userSchema.methods.createPasswordResetToken = async function () {
     
     this.passwordResetExpires = Date.now() + 30 * 60 * 1000;
     return resetToken;
-}
+};
 
 export const User = mongoose.model("User",userSchema)
