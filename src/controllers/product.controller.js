@@ -1,6 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import slugify from "slugify";
-import { Product } from "../models/productModel.js";
+import { Product } from "../models/product.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
