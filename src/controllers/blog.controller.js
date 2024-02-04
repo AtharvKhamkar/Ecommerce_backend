@@ -110,5 +110,62 @@ const deleteBlog = asyncHandler(async (req, res) => {
     )
 })
 
-export { createBlog, deleteBlog, getAllBlogs, getBlog, updateBlog };
+const likeBlog = asyncHandler(async (req, res) => {
+    const { Id } = req.params
+    
+    const blog = await Blog.findById(Id)
+    if (!blog) {
+        throw new ApiError(400,"Blog does not found")
+    }
+
+    if (blog.isLiked === false) {
+        blog.isLiked = true
+        blog.likes.push(req.user._id)
+        await blog.save()
+    } else {
+        blog.isLiked = false
+        const findIndex = blog.likes.findIndex(a => a._id === req.user._id)
+        blog.likes.splice(findIndex,1)
+        await blog.save()
+    }
+
+    
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                blog,
+                "Blog liked successfully"
+        )
+    )
+})
+
+const dislikeBlog = asyncHandler(async (req, res) => {
+    const { Id } = req.params
+    
+    const blog = await Blog.findById(Id)
+
+    if (blog.isDisliked === false) {
+        blog.isDisliked = true
+        blog.dislikes.push(req.user._id)
+        await blog.save()
+    } else {
+        blog.isDisliked = false
+        const findIndex = blog.dislikes.findIndex(a => a._id === req.user._id)
+        blog.dislikes.splice(findIndex, 1)
+        await blog.save()
+    }
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                blog,
+                "Blog disliked successfully"
+        )
+    )
+})
+
+export { createBlog, deleteBlog, dislikeBlog, getAllBlogs, getBlog, likeBlog, updateBlog };
 
