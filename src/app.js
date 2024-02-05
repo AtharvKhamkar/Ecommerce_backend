@@ -23,12 +23,14 @@ app.use(express.static("public"))
 app.use(cookieParser())
 
 import blogRouter from "./routes/blog.routes.js";
+import categoryRouter from "./routes/category.routes.js";
 import productRouter from "./routes/product.routes.js";
 import userRouter from "./routes/user.routes.js";
 
 app.use("/api/v1/users",userRouter)
 app.use("/api/v1/products", productRouter)
-app.use("/api/v1/blog",blogRouter)
+app.use("/api/v1/blog", blogRouter)
+app.use("/api/v1/category",categoryRouter)
 
 
 export { app };
