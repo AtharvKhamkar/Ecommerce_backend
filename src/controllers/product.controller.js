@@ -156,5 +156,32 @@ const deleteProduct = asyncHandler(async (req, res) => {
     )
 })
 
-export { createProduct, deleteProduct, getAllProducts, getaProduct, updateProduct };
+const addToWishList = asyncHandler(async (req, res) => {
+    const { Id } = req.params
+    
+    const user = req.user
+    const isContain = user.wishlist.includes(Id)
+    if (!isContain) {
+        user.wishlist.push(Id)
+        await user.save()
+    } else {
+        const findIndex = user.wishlist.findIndex(a => a._id === Id)
+        user.wishlist.splice(findIndex, 1)
+        await user.save()
+    }
+    
+    
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user,
+                "Wishlist updated successfully"
+        )
+    )
+})
+
+
+export {addToWishList, createProduct, deleteProduct, getAllProducts, getaProduct, updateProduct };
 
