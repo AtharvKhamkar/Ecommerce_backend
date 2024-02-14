@@ -4,6 +4,7 @@ import { Product } from "../models/product.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const createProduct = asyncHandler(async (req, res) => {
     if (req.body.title) {
@@ -182,6 +183,49 @@ const addToWishList = asyncHandler(async (req, res) => {
     )
 })
 
+const addImages = asyncHandler(async (req, res) => {
+    const { Id } = req.params;
+    if (!isValidObjectId(Id)) {
+        throw new ApiError(400,"Invalid product Id")
+    }
 
-export {addToWishList, createProduct, deleteProduct, getAllProducts, getaProduct, updateProduct };
+    try {
+        const uploader = (path) => uploadOnCloudinary(path, "images")
+        const urls = [];
+        const files = req.files
+        for (const file of files) {
+            const { path } = file;
+            const newPath = await uploader(path);
+            console.log(newPath.url)
+            urls.push(newPath.url)
+        }
+
+        const findProduct = await Product.findByIdAndUpdate(
+            new mongoose.Types.ObjectId(Id),
+            {
+                images:urls.map((file) =>{
+                    return file
+                })
+            },
+            {
+                new : true
+            }
+        )
+
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    findProduct,
+                    "Images uploaded successfully"
+            )
+        )
+         
+    } catch (error) {
+        throw new ApiError(400,"Error while uploading image")
+    }
+})
+
+
+export { addImages, addToWishList, createProduct, deleteProduct, getAllProducts, getaProduct, updateProduct };
 
