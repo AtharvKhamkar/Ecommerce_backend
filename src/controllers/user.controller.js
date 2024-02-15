@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -83,6 +83,46 @@ const loginUser = asyncHandler(async (req, res) => {
                     user:loggedInUser,accessToken,refreshToken
                 },
                 "User logged in Successfully"
+        )
+    )
+})
+
+const loginAdmin = asyncHandler(async (req, res) => {
+    const { email, password } = req.body
+    
+    const user = await User.findOne({ email })
+    if (!user) {
+        throw new ApiError(400,"You are not admin please register first")
+    }
+
+    if (user.role !== "admin") {
+        throw new ApiError(400,"You are not admin")
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password)
+    if (!isPasswordValid) {
+        throw new ApiError(400,"Incorrect credentials")
+    }
+
+    const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id)
+
+    const loggedInAdmin = await User.findById(user._id).select("-accessToken -refreshToken")
+    
+    const options = {
+        httpOnly: true,
+        secure:true
+    }
+
+    return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    user:loggedInAdmin,accessToken,refreshToken
+                },
+                "Admin logged in successfully"
         )
     )
 })
@@ -370,10 +410,64 @@ const logoutUser = asyncHandler(async (req, res) => {
     )
 })
 
+const getWishlist = asyncHandler(async (req, res) => {
+    const { _id } = req.user
+    
+    const fetchedUser = await User.aggregate([
+        {
+            $match: {
+                _id:new mongoose.Types.ObjectId(_id)
+            }
+        },
+        {
+            $lookup: {
+                from: "products",
+                localField: "wishlist",
+                foreignField: "_id",
+                as: "wishlist",
+                pipeline: [
+                    {
+                        $project: {
+                            title:1
+                        }
+                    }
+                ]
+            }
+        },
+        
+        
+    ])
+
+    // const fetchedUser = await User.findById(_id).populate("wishlist");
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                fetchedUser,
+                "User wishlist fetched successfully"
+        )
+    )
+})
+
+const getUserAddress = asyncHandler(async (req, res) => {
+    const  user  = req.user
+    
+    const allAddress = await User.findById(user._id).populate("address").select("address")
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                allAddress,
+                "Success"
+        )
+    )
+})
 
 
 
 
 
-export { blockUser, deleteUser, forgotPasswordToken, getAllUsers, getUser, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser };
+export { blockUser, deleteUser, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser };
 

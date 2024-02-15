@@ -22,6 +22,7 @@ app.use(express.static("public"))
 
 app.use(cookieParser())
 
+import addressRouter from "./routes/address.routes.js";
 import blogRouter from "./routes/blog.routes.js";
 import blogCategoryRoutes from "./routes/blogCategory.routes.js";
 import brandRouter from "./routes/brand.routes.js";
@@ -38,7 +39,8 @@ app.use("/api/v1/category", categoryRouter)
 app.use("/api/v1/blogcategory", blogCategoryRoutes)
 app.use("/api/v1/brand", brandRouter)
 app.use("/api/v1/ratings", ratingRoutes)
-app.use("/api/v1/coupons",couponRouter)
+app.use("/api/v1/coupons", couponRouter)
+app.use("/api/v1/address",addressRouter)
 
 
 export { app };
