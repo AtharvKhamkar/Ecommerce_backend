@@ -37,10 +37,7 @@ const blogSchema = new mongoose.Schema({
             ref:"User"
         }
     ],
-    image: {
-        type: String,
-        default:"https://images.pexels.com/photos/733856/pexels-photo-733856.jpeg"
-    },
+    images: [],
     author: {
         type: String,
         default:"admin"

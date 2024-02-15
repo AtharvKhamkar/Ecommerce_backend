@@ -1,8 +1,10 @@
 import mongoose, { isValidObjectId } from "mongoose";
+import { upload } from "../middlewares/multer.middleware.js";
 import { Blog } from "../models/blog.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const createBlog = asyncHandler(async (req, res) => {
     const { title, description, category } = req.body
@@ -167,5 +169,46 @@ const dislikeBlog = asyncHandler(async (req, res) => {
     )
 })
 
-export { createBlog, deleteBlog, dislikeBlog, getAllBlogs, getBlog, likeBlog, updateBlog };
+const addBlogImages = asyncHandler(async (req, res) => {
+    const { Id } = req.params;
+    if (!isValidObjectId(Id)) {
+        throw new ApiError(400, "Invalid object Id")
+    }
+
+    try {
+        const uploader = (path) => uploadOnCloudinary(path, "images");
+        const urls = [];
+        const files = req.files;
+        for (const file of files) {
+            const { path } = file;
+            const newPath = await uploader(path);
+            urls.push(newPath.url);
+        }
+
+        const findBlog = await Blog.findByIdAndUpdate(
+            new mongoose.Types.ObjectId(Id),
+            {
+                images: urls.map((file) => {
+                    return file;
+                }),
+            },
+            {
+                new:true
+            }
+        )
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    findBlog,
+                    "Images uploaded successfully"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(400,"Error while uploading image on cloudinary")
+    }
+})
+
+
+export { addBlogImages, createBlog, deleteBlog, dislikeBlog, getAllBlogs, getBlog, likeBlog, updateBlog };
 
