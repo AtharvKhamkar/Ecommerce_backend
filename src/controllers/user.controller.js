@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import mongoose, { isValidObjectId } from "mongoose";
+import { Cart } from "../models/cart.model.js";
+import { Product } from "../models/product.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -465,9 +467,109 @@ const getUserAddress = asyncHandler(async (req, res) => {
     )
 })
 
+const userCart = asyncHandler(async (req, res) => {
+    //get product info from user through req.body
+    //get user instance through verifyJWT
+    //check if the cart is alreadyexist or not
+    //create one empty product array
+    //create on empty object that contains value of product, count,prize
+    //get product price by product Id
+    //push that object into the product array
+    //for loop through the array and calculate price
+    //save the created object to the database
+
+    const { cart } = req.body;
+    const user = req.user
+
+    if (!isValidObjectId(user._id)) {
+        throw new ApiError(400,"Invalid user Id")
+    }
+
+    const isAlreadyExistCart = await Cart.findOne({ orderBy: user._id })
+    if (isAlreadyExistCart) {
+        await isAlreadyExistCart.remove()
+        throw new ApiError(400, "Cart is already exists")
+    }
+
+    try {
+        let products = [];
+        console.log(cart)
+        for (let i = 0; i < cart.length; i++){
+            let object = {}
+            object.product = cart[i]._id
+            object.count = cart[i].count
+            object.color = cart[i].color
+            let getPrice = await Product.findById(cart[i]._id).select("price").exec();
+            object.price = getPrice.price;
+            products.push(object)
+        }
+        
+        let cartTotal = 0;
+        for (let i = 0; i < products.length; i++){
+            cartTotal = cartTotal + products[i].count * products[i].price
+        }
+        const newCart = await Cart.create({
+            products,
+            cartTotal,
+            orderBy:user?._id
+
+        })
+        await user.cart.push(newCart._id)
+        await user.save()
+
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    newCart,
+                    "Cart fetched successfully"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(400,error)
+    }
+
+})
+
+const getUserCart = asyncHandler(async (req, res) => {
+    const user = req.user
+    
+    const cart = await Cart.findOne({orderBy:user._id}).populate("products.product")
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                cart,
+                "Cart fetched successfully"
+        )
+    )
+})
+
+const emptyCart = asyncHandler(async (req, res) => {
+    const user = req.user
+
+    const cart = await Cart.findOneAndDelete({ orderBy: user._id })
+
+    const findIndex = user.cart.findIndex(a => a._id === cart._id)
+    user.cart.splice(findIndex, 1)
+    await user.save()
+    
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    "deleted_cart" : cart._id
+                },
+                "Cart empty successfully "
+        )
+    )
+})
 
 
 
 
-export { blockUser, deleteUser, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser };
+
+export { blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart };
 
