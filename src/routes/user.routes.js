@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart } from "../controllers/user.controller.js";
+import { applyCoupon, blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart } from "../controllers/user.controller.js";
 import { isAdmin, verifyJWT } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -21,7 +21,8 @@ router.route("/unblock-user/:userId").patch(unblockUser)
 router.route("/get-address").get(verifyJWT, getUserAddress)
 router.route("/add-cart").post(verifyJWT, userCart)
 router.route("/get-cart").get(verifyJWT, getUserCart)
-router.route("/empty-cart").delete(verifyJWT,emptyCart)
+router.route("/empty-cart").delete(verifyJWT, emptyCart)
+router.route("/apply-coupon").patch(verifyJWT,upload.none(),applyCoupon)
 router.route("/renew-tokens").post(upload.none(), renewAccessAndRefreshToken)
 router.route("/get-wishlist").get(verifyJWT,getWishlist)
 router.route("/logout").post(verifyJWT,upload.none(),logoutUser)

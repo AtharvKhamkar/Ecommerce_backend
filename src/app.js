@@ -28,6 +28,7 @@ import blogCategoryRoutes from "./routes/blogCategory.routes.js";
 import brandRouter from "./routes/brand.routes.js";
 import categoryRouter from "./routes/category.routes.js";
 import couponRouter from "./routes/coupon.routes.js";
+import orderRouter from "./routes/order.routes.js";
 import productRouter from "./routes/product.routes.js";
 import ratingRoutes from "./routes/rating.routes.js";
 import userRouter from "./routes/user.routes.js";
@@ -40,7 +41,8 @@ app.use("/api/v1/blogcategory", blogCategoryRoutes)
 app.use("/api/v1/brand", brandRouter)
 app.use("/api/v1/ratings", ratingRoutes)
 app.use("/api/v1/coupons", couponRouter)
-app.use("/api/v1/address",addressRouter)
+app.use("/api/v1/address", addressRouter)
+app.use("/api/v1/order",orderRouter)
 
 
 export { app };

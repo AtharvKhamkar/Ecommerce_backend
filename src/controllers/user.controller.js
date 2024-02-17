@@ -2,6 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import mongoose, { isValidObjectId } from "mongoose";
 import { Cart } from "../models/cart.model.js";
+import { Coupon } from "../models/coupon.model.js";
 import { Product } from "../models/product.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -567,9 +568,49 @@ const emptyCart = asyncHandler(async (req, res) => {
     )
 })
 
+const applyCoupon = asyncHandler(async (req, res) => {
+    //Get user object from the verifyJWT
+    //Get coupon through req.body
+    //Get cart object by orderBy:user._id
+    //get cart total and apply coupon by cartTotal - (cartTotal*coupon.discount)/100
+    //update the cart total amount and return the saved object
+    const user = req.user
+    const { coupon } = req.body
+
+    console.log(coupon)
+    console.log(user)
+    
+    const savedCoupon = await Coupon.findOne({ name: coupon })
+    
+    const cart = await Cart.findOne({ orderBy: user._id })
+    console.log(cart)
+    const totalAfterDiscount = (cart.cartTotal - (cart.cartTotal * savedCoupon.discount) / 100).toFixed(2);
+
+    const updatedCart = await Cart.findOneAndUpdate(
+        {
+            orderBy:user._id
+        },
+        {
+            totalAfterDiscount
+        },
+        {
+            new:true
+        }
+    )
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedCart,
+                "Cart price updated"
+        )
+    )
+})
 
 
 
 
-export { blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart };
+
+export { applyCoupon, blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart };
 

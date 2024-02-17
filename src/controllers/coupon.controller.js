@@ -77,7 +77,9 @@ const deleteCoupon = asyncHandler(async (req, res) => {
                 "coupon deleted successfully"
         )
     )
- })
+})
+ 
+
 
 export { createCoupon, deleteCoupon, getAllCoupons, updateCoupons };
 
