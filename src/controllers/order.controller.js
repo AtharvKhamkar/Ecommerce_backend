@@ -1,10 +1,11 @@
+import mongoose from "mongoose";
 import uniqid from "uniqid";
 import { Cart } from "../models/cart.model.js";
 import { Order } from "../models/order.model.js";
+import { Product } from "../models/product.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { Product } from "../models/product.model.js";
 
 const placeOrder = asyncHandler(async (req, res) => {
     const { paymentMethod, couponApplied } = req.body;
@@ -57,4 +58,91 @@ const placeOrder = asyncHandler(async (req, res) => {
     
 })
 
-export { placeOrder };
+const userOrders = asyncHandler(async (req, res) => {
+    const orders = await Order.find({ orderBy: req.user._id })
+        .populate("products.product", { title: 1, description: 1, price: 1, totalRating: 1 })
+        .populate("orderBy", { firstName: 1, lastName: 1 })
+        .exec()
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                orders,
+                "Orders fetched successfully"
+        )
+    )
+})
+
+const getAllOrders = asyncHandler(async (req, res) => {
+    const orders = await Order.find()
+        .populate("products.product",{title:1,description:1,price:1,totalRating:1})
+        .populate("orderBy",{firstName:1,lastName:1})
+        .exec()
+    
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                orders,
+                "Fetched all orders"
+        )
+    )
+})
+
+const updateOrderStatus = asyncHandler(async (req, res) => {
+    const { Id } = req.params;
+    const {orderStatus} = req.body
+    const order = await Order.findByIdAndUpdate(
+        new mongoose.Types.ObjectId(Id),
+        {
+            $set: {
+                orderStatus
+            }
+
+        },
+        {
+            new:true
+        }
+    )
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                order,
+                "Order status updated successfully"
+        )
+    )
+})
+
+const cancelOrder = asyncHandler(async (req, res) => {
+    const { Id } = req.params;
+
+    const order = await Order.findByIdAndDelete(Id)
+
+    const update = order.products.map((item) => {
+        return {
+            updateOne: {
+                filter: { _id: item.product._id },
+                update: { $inc: { quantity: item.count, sold: -item.count } },
+            },
+        };
+    })
+
+    const updated = await Product.bulkWrite(update,{})
+
+    return res.status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    "Deleted_order":order.id
+                },
+                "Order cancelled successfully"
+        )
+    )
+})
+
+export { cancelOrder, getAllOrders, placeOrder, updateOrderStatus, userOrders };
+
