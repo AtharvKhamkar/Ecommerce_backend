@@ -21,7 +21,9 @@ app.use(express.urlencoded({
 app.use(express.static("public"))
 
 app.use(cookieParser())
+app.use(limiter)
 
+import { limiter } from "./config/ratelimiter.js";
 import addressRouter from "./routes/address.routes.js";
 import blogRouter from "./routes/blog.routes.js";
 import blogCategoryRoutes from "./routes/blogCategory.routes.js";

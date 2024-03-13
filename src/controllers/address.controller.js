@@ -1,4 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
+import { redisClient } from "../config/redis.js";
 import { Address } from "../models/address.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -45,7 +46,21 @@ const getAddress = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Invalid address Id")
     }
 
+    const cachedValue = await redisClient.get(`address:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched address"
+            )
+        )
+    }
+
     const address = await Address.findById(Id)
+
+    await redisClient.set(`address:${Id}`,JSON.stringify(address),'EX',60)
 
     return res.status(200)
         .json(

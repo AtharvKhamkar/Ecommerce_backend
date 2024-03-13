@@ -1,5 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
-import { upload } from "../middlewares/multer.middleware.js";
+import { redisClient } from "../config/redis.js";
 import { Blog } from "../models/blog.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -61,6 +61,18 @@ const getBlog = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Invalid blog Id")
     }
 
+    const cachedValue = await redisClient.get(`blog:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Blog fetched successfully"
+            )
+        )
+    }
+
     const blog = await Blog.findByIdAndUpdate(
         Id,
         {
@@ -73,6 +85,8 @@ const getBlog = asyncHandler(async (req, res) => {
         }
     )
 
+    await redisClient.set(`blog:${Id}`,JSON.stringify(blog),'EX',60)
+
     return res.status(200)
         .json(
             new ApiResponse(
@@ -84,7 +98,20 @@ const getBlog = asyncHandler(async (req, res) => {
 })
 
 const getAllBlogs = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`allBlogs`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "All blogs fetched successfully"
+            )
+        )
+    }
     const blogs = await Blog.find()
+
+    await redisClient.set(`allBlogs`,JSON.stringify(blogs),'EX',60)
 
     return res.status(200)
         .json(

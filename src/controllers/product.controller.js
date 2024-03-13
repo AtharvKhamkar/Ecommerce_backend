@@ -1,5 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import slugify from "slugify";
+import { redisClient } from "../config/redis.js";
 import { Product } from "../models/product.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -29,10 +30,24 @@ const getaProduct = asyncHandler(async (req, res) => {
         throw new ApiError(400,"Invalid productId")
     }
 
+    const cachedValue = await redisClient.get(`user:product:${productId}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched product"
+            )
+        )
+    }
+
     const product = await Product.findById(productId).select("-createdAt -updatedAt")
     if (!product) {
         throw new ApiError(400,"Product not found")
     }
+
+    await redisClient.set(`user:product:${productId}`,JSON.stringify(product),'EX',60)
 
     return res.status(200)
         .json(

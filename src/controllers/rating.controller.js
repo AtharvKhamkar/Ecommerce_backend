@@ -1,4 +1,5 @@
 import mongoose, { isValidObjectId } from "mongoose";
+import { redisClient } from "../config/redis.js";
 import { Product } from "../models/product.model.js";
 import { Ratings } from "../models/ratings.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -119,6 +120,17 @@ const updateRatings = asyncHandler(async (req, res) => {
 })
 
 const getAllProductRatings = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`allProductRating`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched all product ratings"
+            )
+        )
+    }
     const ratings = await Ratings.aggregate(
         [
             {
@@ -176,6 +188,8 @@ const getAllProductRatings = asyncHandler(async (req, res) => {
         ]
 
     )
+
+    await redisClient.set(`allProductRating`,JSON.stringify(ratings),'EX',60)
     return res.status(200)
         .json(
             new ApiResponse(
@@ -188,12 +202,26 @@ const getAllProductRatings = asyncHandler(async (req, res) => {
 
 const getRatingByProduct = asyncHandler(async (req, res) => {
     const { Id } = req.params
+
+    const cachedValue = await redisClient.get(`rating:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched product rating"
+            )
+        )
+    }
     
     const rating = await Ratings.find({
         productId:Id
     }).select("-createdAt -updatedAt -__V")
 
     const averageRating = await calTotalRating(Id)
+
+    await redisClient.set(`rating:${Id}`,JSON.stringify(averageRating),'EX',60)
 
     return res.status(200)
         .json(

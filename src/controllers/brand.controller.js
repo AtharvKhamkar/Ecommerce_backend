@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { redisClient } from "../config/redis.js";
 import { Brand } from "../models/brand.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -22,8 +23,22 @@ const addBrand = asyncHandler(async (req, res) => {
 
 const getBrand = asyncHandler(async (req, res) => {
     const { Id } = req.params
+
+    const cachedValue = await redisClient.get(`brand:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched brand value"
+            )
+        )
+    }
     
     const brand = await Brand.findById(Id).select("title")
+
+    await redisClient.set(`brand:${Id}`,JSON.stringify(brand),'EX',60)
 
     return res.status(200)
         .json(
@@ -36,7 +51,20 @@ const getBrand = asyncHandler(async (req, res) => {
 })
 
 const getAllBrand = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`allBrands`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched all brands"
+            )
+        )
+    }
     const brand = await Brand.find().select("title")
+
+    await redisClient.set(`allBrands`,JSON.stringify(brand),'EX',60)
 
     return res.status(200)
         .json(

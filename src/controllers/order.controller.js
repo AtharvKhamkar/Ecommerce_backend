@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import uniqid from "uniqid";
+import { redisClient } from "../config/redis.js";
 import { Cart } from "../models/cart.model.js";
 import { Order } from "../models/order.model.js";
 import { Product } from "../models/product.model.js";
@@ -59,10 +60,24 @@ const placeOrder = asyncHandler(async (req, res) => {
 })
 
 const userOrders = asyncHandler(async (req, res) => {
-    const orders = await Order.find({ orderBy: req.user._id })
+    const Id = req.user._id
+    const cachedValue = await redisClient.get(`Order:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Order fetched successfully"
+            )
+        )
+    }
+    const orders = await Order.find({ orderBy: Id })
         .populate("products.product", { title: 1, description: 1, price: 1, totalRating: 1 })
         .populate("orderBy", { firstName: 1, lastName: 1 })
         .exec()
+    
+    await redisClient.set(`Order:${Id}`,JSON.stringify(orders),'EX',60)
 
     return res.status(200)
         .json(
@@ -75,10 +90,23 @@ const userOrders = asyncHandler(async (req, res) => {
 })
 
 const getAllOrders = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`allOrders`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched all orders"
+            )
+        )
+    }
     const orders = await Order.find()
         .populate("products.product",{title:1,description:1,price:1,totalRating:1})
         .populate("orderBy",{firstName:1,lastName:1})
         .exec()
+    
+    await redisClient.set(`allOrders`,JSON.stringify(orders),'EX',60)
     
     return res.status(200)
         .json(

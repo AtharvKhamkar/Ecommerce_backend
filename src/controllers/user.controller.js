@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import mongoose, { isValidObjectId } from "mongoose";
+import { redisClient } from "../config/redis.js";
 import { Cart } from "../models/cart.model.js";
 import { Coupon } from "../models/coupon.model.js";
 import { Product } from "../models/product.model.js";
@@ -130,8 +131,21 @@ const loginAdmin = asyncHandler(async (req, res) => {
     )
 })
 
-const getAllUsers = asyncHandler(async(req, res) => {
+const getAllUsers = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`user:allUser:${req.user._id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "All users fetched successfully"
+            )
+        )
+    }
+
     const allUsers = await User.find().select("-password -refreshToken")
+    await redisClient.set(`user:allUser:${req.user._id}`,JSON.stringify(allUsers),'EX',60)
     return res.status(200)
         .json(
             new ApiResponse(
@@ -145,14 +159,29 @@ const getAllUsers = asyncHandler(async(req, res) => {
 const getUser = asyncHandler(async (req, res) => {
     const { userId } = req.params
 
+    console.log(userId)
+
     if (!isValidObjectId(userId)) {
         throw new ApiError(400,"Please send valid commentID")
+    }
+
+    const cachedValue = await redisClient.get(`user:${userId}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "User fetched successfully"
+            )
+        )
     }
     
     const user = await User.findById(userId).select("-password -refreshToken")
     if (!user) {
         throw new ApiResponse(400,"User not found please provide valid userID")
     }
+    await redisClient.set(`user:${userId}`,JSON.stringify(user),'EX',60)
 
     return res.status(200)
         .json(
@@ -414,12 +443,24 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const getWishlist = asyncHandler(async (req, res) => {
-    const { _id } = req.user
+    const Id = req.user?._id
+
+    const cachedValue = await redisClient.get(`user:wishlist:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched wishlist"
+                )
+        )
+    }
     
     const fetchedUser = await User.aggregate([
         {
             $match: {
-                _id:new mongoose.Types.ObjectId(_id)
+                _id:new mongoose.Types.ObjectId(Id)
             }
         },
         {
@@ -442,6 +483,7 @@ const getWishlist = asyncHandler(async (req, res) => {
     ])
 
     // const fetchedUser = await User.findById(_id).populate("wishlist");
+    await redisClient.set(`user:wishlist:${Id}`,JSON.stringify(fetchedUser),'EX',60)
 
     return res.status(200)
         .json(
@@ -454,9 +496,23 @@ const getWishlist = asyncHandler(async (req, res) => {
 })
 
 const getUserAddress = asyncHandler(async (req, res) => {
-    const  user  = req.user
+    const Id = req.user?._id
     
-    const allAddress = await User.findById(user._id).populate("address").select("address")
+    const cachedValue = await redisClient.get(`user:address:${Id}`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched address"
+            )
+        )
+    }
+
+    
+    const allAddress = await User.findById(Id).populate("address").select("address")
+    await redisClient.set(`user:address:${Id}`,JSON.stringify(allAddress),'EX',60)
 
     return res.status(200)
         .json(
@@ -533,9 +589,24 @@ const userCart = asyncHandler(async (req, res) => {
 })
 
 const getUserCart = asyncHandler(async (req, res) => {
-    const user = req.user
+    const  user = req.user
+
+    const cachedData = await redisClient.get(`user:cart:${req.user._id}`)
+    if (cachedData) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedData),
+                    "Cart fetched successfully"
+            )
+        )
+
+    }
     
-    const cart = await Cart.findOne({orderBy:user._id}).populate("products.product")
+    const cart = await Cart.findOne({ orderBy: user._id }).populate("products.product")
+    await redisClient.set(`user:cart:${req.user._id}`, JSON.stringify(cart),'EX',30)
+    
 
     return res.status(200)
         .json(

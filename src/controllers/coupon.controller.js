@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { redisClient } from "../config/redis.js";
 import { Coupon } from "../models/coupon.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -23,7 +24,20 @@ const createCoupon = asyncHandler(async (req, res) => {
 })
 
 const getAllCoupons = asyncHandler(async (req, res) => {
+    const cachedValue = await redisClient.get(`allCoupons`)
+    if (cachedValue) {
+        return res.status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    JSON.parse(cachedValue),
+                    "Successfully fetched all coupons"
+            )
+        )
+    }
     const coupons = await Coupon.find()
+
+    await redisClient.set(`allCoupons`,JSON.stringify(coupons),'EX',60)
 
     return res.status(200)
         .json(
