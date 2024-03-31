@@ -33,5 +33,16 @@ const isAdmin = asyncHandler(async (req, res, next) => {
     }
 })
 
-export { isAdmin, verifyJWT };
+const isValidated = (schema) => asyncHandler(async (req, res, next) => {
+    try {
+        const parseBody = await schema.parseAsync(req.body);
+        req.body = parseBody;
+        next();
+    } catch (error) {
+        console.log(error.issues[0].message)
+        res.status(400).json({msg:error.issues[0].message})
+    }
+})
+
+export { isAdmin, isValidated, verifyJWT };
 

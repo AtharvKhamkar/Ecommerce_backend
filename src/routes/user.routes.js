@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { applyCoupon, blockUser, deleteUser, emptyCart, forgotPasswordToken, getAllUsers, getUser, getUserAddress, getUserCart, getWishlist, loginAdmin, loginUser, logoutUser, registerUser, renewAccessAndRefreshToken, resetPassword, unblockUser, updatePassword, updateUser, userCart } from "../controllers/user.controller.js";
-import { isAdmin, verifyJWT } from "../middlewares/authMiddleware.js";
+import { isAdmin, isValidated, verifyJWT } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { signupSchema } from "../schemas/auth.schemas.js";
 
 const router = Router()
 
 
-router.route("/register").post(upload.none(), registerUser)
+router.route("/register").post(upload.none(), isValidated(signupSchema),registerUser)
 router.route("/login").post(upload.none(), loginUser)
 router.route("/login-admin").post(upload.none(),loginAdmin)
 router.route("/all-users").get(verifyJWT,isAdmin,getAllUsers)
